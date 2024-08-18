@@ -16,12 +16,21 @@ read email
 
 echo "Patching files..."
 
-sed -i "s/eframe_template/$crate/g" Cargo.toml
-sed -i "s/eframe_template/$crate/g" src/main.rs
-sed -i "s/eframe template/$crate/g" index.html
-sed -i "s/eframe_template/$crate/g" assets/sw.js
-sed -i "s/Emil Ernerfeldt/$name/g" Cargo.toml
-sed -i "s/emil.ernerfeldt@gmail.com/$email/g" Cargo.toml
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  /opt/homebrew/opt/gnu-sed/libexec/gnubin/sed -i "s/eframe_template/$crate/g" Cargo.toml
+  /opt/homebrew/opt/gnu-sed/libexec/gnubin/sed -i "s/eframe_template/$crate/g" src/main.rs
+  /opt/homebrew/opt/gnu-sed/libexec/gnubin/sed -i "s/eframe template/$crate/g" index.html
+  /opt/homebrew/opt/gnu-sed/libexec/gnubin/sed -i "s/eframe_template/$crate/g" assets/sw.js
+  /opt/homebrew/opt/gnu-sed/libexec/gnubin/sed -i "s/Emil Ernerfeldt/$name/g" Cargo.toml
+  /opt/homebrew/opt/gnu-sed/libexec/gnubin/sed -i "s/emil.ernerfeldt@gmail.com/$email/g" Cargo.toml
+else
+  sed -i "s/eframe_template/$crate/g" Cargo.toml
+  sed -i "s/eframe_template/$crate/g" src/main.rs
+  sed -i "s/eframe template/$crate/g" index.html
+  sed -i "s/eframe_template/$crate/g" assets/sw.js
+  sed -i "s/Emil Ernerfeldt/$name/g" Cargo.toml
+  sed -i "s/emil.ernerfeldt@gmail.com/$email/g" Cargo.toml
+fi
 
 echo "Done."
 
