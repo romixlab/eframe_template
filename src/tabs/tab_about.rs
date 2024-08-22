@@ -1,7 +1,4 @@
-use egui::{Ui, WidgetText};
-use serde::{Deserialize, Serialize};
-use crate::context::Context;
-use crate::tab_viewer::TabUi;
+use crate::prelude::*;
 
 #[derive(Default, Serialize, Deserialize)]
 pub struct TabAbout {
