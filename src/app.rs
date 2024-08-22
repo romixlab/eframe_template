@@ -1,7 +1,7 @@
 use egui::{TopBottomPanel, Ui};
 use egui_dock::{DockArea, DockState, NodeIndex, SurfaceIndex};
 use serde::{Deserialize, Serialize};
-
+use tokio::sync::oneshot;
 use crate::context::Context;
 use crate::tab_viewer::AppTabViewer;
 use crate::tabs::{Tab, TabKindDiscriminants};
@@ -9,6 +9,7 @@ use crate::tabs::{Tab, TabKindDiscriminants};
 pub struct TemplateApp {
     cx: Context,
     state: State,
+    shutdown_event_tx: Option<oneshot::Sender<()>>
 }
 
 #[derive(Serialize, Deserialize)]
@@ -31,14 +32,14 @@ impl Default for State {
 
 impl TemplateApp {
     /// Called once before the first frame.
-    pub fn new(cc: &eframe::CreationContext<'_>, cx: Context) -> Self {
+    pub fn new(cc: &eframe::CreationContext<'_>, cx: Context, shutdown_event_tx: oneshot::Sender<()>) -> Self {
         // Load previous app state (if any).
         if let Some(storage) = cc.storage {
             let state = eframe::get_value(storage, eframe::APP_KEY).unwrap_or(State::default());
-            TemplateApp { cx, state }
+            TemplateApp { cx, state, shutdown_event_tx: Some(shutdown_event_tx) }
         } else {
             let state = State::default();
-            TemplateApp { cx, state }
+            TemplateApp { cx, state, shutdown_event_tx: Some(shutdown_event_tx) }
         }
         // if let Some(storage) = cc.storage {
         //     // Restore context for all the tabs
@@ -118,6 +119,13 @@ impl eframe::App for TemplateApp {
 
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
         eframe::set_value(storage, eframe::APP_KEY, &self.state);
+    }
+
+    // fn on_exit(&mut self) {
+    fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
+        if let Some(tx) = self.shutdown_event_tx.take() {
+            _ = tx.send(());
+        }
     }
 
     fn clear_color(&self, visuals: &egui::Visuals) -> [f32; 4] {

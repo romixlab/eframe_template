@@ -6,6 +6,16 @@
 fn main() -> eframe::Result {
     tracing_subscriber::fmt::init();
 
+    let runtime = tokio::runtime::Builder::new_multi_thread()
+        // .worker_threads(4)
+        .enable_all()
+        .build()
+        .unwrap();
+
+    let _guard = runtime.enter();
+
+    let (shutdown_event_tx, shutdown_event_rx) = tokio::sync::oneshot::channel::<()>();
+
     let cx = eframe_template::context::Context::new();
 
     let native_options = eframe::NativeOptions {
@@ -19,11 +29,20 @@ fn main() -> eframe::Result {
             ),
         ..Default::default()
     };
-    eframe::run_native(
+    let ui_result = eframe::run_native(
         "eframe template",
         native_options,
-        Box::new(|cc| Ok(Box::new(eframe_template::TemplateApp::new(cc, cx)))),
-    )
+        Box::new(|cc| Ok(Box::new(eframe_template::TemplateApp::new(cc, cx, shutdown_event_tx)))),
+    );
+
+    // Wait for async tasks to finish
+    runtime.block_on(async move {
+        _ = shutdown_event_rx.await;
+        tracing::info!("Shutting down by UI request");
+        // TODO: send out exit request to other tasks here
+    });
+
+    ui_result
 }
 
 // When compiling to web using trunk:
