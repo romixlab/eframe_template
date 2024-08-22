@@ -2,8 +2,8 @@
 
 mod app;
 pub mod context;
+mod prelude;
 mod tab_viewer;
 mod tabs;
-mod prelude;
 
 pub use app::TemplateApp;

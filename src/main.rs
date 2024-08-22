@@ -1,10 +1,20 @@
 #![warn(clippy::all, rust_2018_idioms)]
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
+use tracing_subscriber::EnvFilter;
+
 // When compiling natively:
 #[cfg(not(target_arch = "wasm32"))]
 fn main() -> eframe::Result {
-    tracing_subscriber::fmt::init();
+    let collector = egui_tracing::EventCollector::default();
+    tracing_subscriber::registry()
+        .with(collector.clone())
+        .with(tracing_subscriber::fmt::Layer::default())
+        .with(EnvFilter::from_default_env())
+        .init();
+    // tracing_subscriber::fmt::init();
 
     let runtime = tokio::runtime::Builder::new_multi_thread()
         // .worker_threads(4)
@@ -32,7 +42,14 @@ fn main() -> eframe::Result {
     let ui_result = eframe::run_native(
         "eframe template",
         native_options,
-        Box::new(|cc| Ok(Box::new(eframe_template::TemplateApp::new(cc, cx, shutdown_event_tx)))),
+        Box::new(|cc| {
+            Ok(Box::new(eframe_template::TemplateApp::new(
+                cc,
+                cx,
+                collector,
+                shutdown_event_tx,
+            )))
+        }),
     );
 
     // Wait for async tasks to finish

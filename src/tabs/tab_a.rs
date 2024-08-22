@@ -12,5 +12,9 @@ impl TabUi for TabA {
 
     fn ui(&mut self, ui: &mut Ui, _cx: &mut Context) {
         ui.text_edit_singleline(&mut self.s);
+
+        if ui.button("Log").clicked() {
+            tracing::info!("Button in TabA");
+        }
     }
 }

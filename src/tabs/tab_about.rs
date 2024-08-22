@@ -1,9 +1,7 @@
 use crate::prelude::*;
 
 #[derive(Default, Serialize, Deserialize)]
-pub struct TabAbout {
-
-}
+pub struct TabAbout {}
 
 impl TabUi for TabAbout {
     fn title(&self) -> WidgetText {
