@@ -3,6 +3,7 @@ use crate::tab_viewer::AppTabViewer;
 use crate::tabs::{Tab, TabKind, TabKindDiscriminants};
 use egui::{TopBottomPanel, Ui};
 use egui_dock::{DockArea, DockState, NodeIndex, SurfaceIndex};
+use egui_modal::Modal;
 use egui_tracing::EventCollector;
 use serde::{Deserialize, Serialize};
 use tokio::sync::oneshot;
@@ -12,6 +13,8 @@ pub struct TemplateApp {
     state: State,
     log_viewer: crate::tabs::log_viewer::LogViewer,
     shutdown_event_tx: Option<oneshot::Sender<()>>,
+    shutdown_modal: Modal,
+    shutdown_confirmed: bool,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -60,6 +63,8 @@ impl TemplateApp {
             state,
             log_viewer,
             shutdown_event_tx: Some(shutdown_event_tx),
+            shutdown_modal: Modal::new(&cc.egui_ctx, "shutdown_modal"),
+            shutdown_confirmed: false,
         }
     }
 
@@ -139,6 +144,30 @@ impl eframe::App for TemplateApp {
                 node: NodeIndex(self.state.tab_counter),
             });
             self.state.tab_counter += 1;
+        });
+
+        let modal = &self.shutdown_modal;
+        if ctx.input(|i| i.viewport().close_requested()) {
+            if !self.shutdown_confirmed {
+                ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
+                modal.open();
+            }
+        }
+        modal.show(|ui| {
+            modal.title(ui, "Confirm exit");
+            modal.frame(ui, |ui| {
+                ui.label("Are you sure you want to exit?");
+            });
+            modal.buttons(ui, |ui| {
+                modal.button(ui, "Cancel");
+                if modal.suggested_button(ui, "Save & Exit").clicked() {
+                    // TODO: Save things, set shutdown_confirmed to true and send a Close command
+                };
+                if modal.caution_button(ui, "Discard & Exit").clicked() {
+                    self.shutdown_confirmed = true;
+                    ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
+                };
+            });
         });
     }
 

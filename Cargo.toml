@@ -19,6 +19,7 @@ eframe = { version = "0.28", default-features = false, features = [
     "persistence",   # Enable restoring app state when restarting the app.
 ] }
 egui_dock = { version = "0.13", features = ["serde"] }
+egui-modal = "0.4"
 egui_tracing = "0.2.2"
 
 serde = { version = "1", features = ["derive"] }
