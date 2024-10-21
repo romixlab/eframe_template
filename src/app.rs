@@ -1,8 +1,7 @@
 use crate::context::Context;
-use crate::tab_viewer::AppTabViewer;
-use crate::tabs::{Tab, TabKind, TabKindDiscriminants};
-use egui::{TopBottomPanel, Ui};
-use egui_dock::{DockArea, DockState, NodeIndex, SurfaceIndex};
+// use crate::tab_viewer::AppTabViewer;
+use crate::tabs::{Tab, TabKind, TabKindDiscriminants, TreeBehavior};
+use egui::{CentralPanel, TopBottomPanel, Ui};
 use egui_modal::Modal;
 use egui_tracing::EventCollector;
 use serde::{Deserialize, Serialize};
@@ -19,18 +18,49 @@ pub struct TemplateApp {
 
 #[derive(Serialize, Deserialize)]
 struct State {
-    dock_state: DockState<Tab>,
-    tab_counter: usize,
+    tabs: egui_tiles::Tree<Tab>,
+    #[serde(skip)]
+    tabs_behavior: TreeBehavior,
 }
 
 impl Default for State {
     fn default() -> Self {
-        let tabs = Tab::default_tabs();
-        let tab_counter = tabs.len() + 1;
-        let dock_state = DockState::new(tabs);
-        State {
-            dock_state,
-            tab_counter,
+        let mut next_view_nr = 0;
+        let mut gen_view = || {
+            let view = Tab::tab_b(next_view_nr);
+            next_view_nr += 1;
+            view
+        };
+
+        let mut tiles = egui_tiles::Tiles::default();
+
+        let mut tabs = vec![];
+        let tab_tile = {
+            let children = (0..7).map(|_| tiles.insert_pane(gen_view())).collect();
+            tiles.insert_tab_tile(children)
+        };
+        tabs.push(tab_tile);
+        tabs.push({
+            let children = (0..7).map(|_| tiles.insert_pane(gen_view())).collect();
+            tiles.insert_horizontal_tile(children)
+        });
+        tabs.push({
+            let children = (0..7).map(|_| tiles.insert_pane(gen_view())).collect();
+            tiles.insert_vertical_tile(children)
+        });
+        tabs.push({
+            let cells = (0..11).map(|_| tiles.insert_pane(gen_view())).collect();
+            tiles.insert_grid_tile(cells)
+        });
+        tabs.push(tiles.insert_pane(gen_view()));
+
+        let root = tiles.insert_tab_tile(tabs);
+
+        let tabs = egui_tiles::Tree::new("my_tree", root, tiles);
+
+        Self {
+            tabs,
+            tabs_behavior: Default::default(),
         }
     }
 }
@@ -52,11 +82,13 @@ impl TemplateApp {
 
         let log_viewer = crate::tabs::log_viewer::LogViewer::new(event_collector);
         // restore Log Viewer context if it's window is already open
-        for (_, tab) in state.dock_state.iter_all_tabs_mut() {
-            if matches!(tab.kind, TabKind::LogViewer(_)) {
-                tab.kind = TabKind::LogViewer(log_viewer.clone());
-            }
-        }
+        // TODO: Fix this
+        // for (_, tab) in state.dock_state.iter_all_tabs_mut() {
+        //     if matches!(tab.kind, TabKind::LogViewer(_)) {
+        //         tab.kind = TabKind::LogViewer(log_viewer.clone());
+        //     }
+        // }
+        state.tabs_behavior.feed_cx(cx.clone());
 
         TemplateApp {
             cx,
@@ -80,22 +112,22 @@ impl TemplateApp {
         });
         ui.menu_button("Window", |ui| {
             if ui.button("Log Viewer").clicked() {
-                if !self.state.focus_on_tab(TabKindDiscriminants::LogViewer) {
-                    self.state
-                        .new_tab(TabKind::LogViewer(self.log_viewer.clone()));
-                }
+                // if !self.state.focus_on_tab(TabKindDiscriminants::LogViewer) {
+                //     self.state
+                //         .new_tab(TabKind::LogViewer(self.log_viewer.clone()));
+                // }
                 ui.close_menu();
             }
             if ui.button("Tab A").clicked() {
-                self.state.new_tab_default(TabKindDiscriminants::TabA);
+                // self.state.new_tab_default(TabKindDiscriminants::TabA);
                 ui.close_menu();
             }
         });
         ui.menu_button("Help", |ui| {
             if ui.button("About").clicked() {
-                if !self.state.focus_on_tab(TabKindDiscriminants::TabAbout) {
-                    self.state.new_tab_default(TabKindDiscriminants::TabAbout);
-                }
+                // if !self.state.focus_on_tab(TabKindDiscriminants::TabAbout) {
+                //     self.state.new_tab_default(TabKindDiscriminants::TabAbout);
+                // }
                 ui.close_menu();
             }
         });
@@ -116,34 +148,8 @@ impl eframe::App for TemplateApp {
             });
         });
 
-        let mut added_nodes = Vec::new();
-        DockArea::new(&mut self.state.dock_state)
-            .show_add_buttons(true)
-            .show_add_popup(true)
-            .style({
-                let mut style = egui_dock::Style::from_egui(ctx.style().as_ref());
-                style.tab_bar.fill_tab_bar = true;
-                style.tab_bar.height = 20.0;
-                style
-            })
-            .show(
-                ctx,
-                &mut AppTabViewer {
-                    added_nodes: &mut added_nodes,
-                    cx: &mut self.cx,
-                },
-            );
-
-        added_nodes.drain(..).for_each(|node| {
-            self.state
-                .dock_state
-                .set_focused_node_and_surface((node.surface, node.node));
-            self.state.dock_state.push_to_focused_leaf(Tab {
-                kind: node.kind,
-                surface: node.surface,
-                node: NodeIndex(self.state.tab_counter),
-            });
-            self.state.tab_counter += 1;
+        CentralPanel::default().show(ctx, |ui| {
+            self.state.tabs.ui(&mut self.state.tabs_behavior, ui);
         });
 
         let modal = &self.shutdown_modal;
@@ -188,51 +194,51 @@ impl eframe::App for TemplateApp {
 }
 
 impl State {
-    fn new_tab_default(&mut self, kind: TabKindDiscriminants) {
-        let tab = kind.create_tab(SurfaceIndex::main(), NodeIndex(self.tab_counter));
-        self.add_tab(tab);
-    }
-
-    fn new_tab(&mut self, kind: TabKind) {
-        let tab = Tab {
-            surface: SurfaceIndex::main(),
-            node: NodeIndex(self.tab_counter),
-            kind,
-        };
-        self.add_tab(tab);
-    }
-
-    fn add_tab(&mut self, tab: Tab) {
-        self.tab_counter += 1;
-        let new_surface_idx = self.dock_state.add_window(vec![tab]);
-        for ((surface_idx, _node_idx), tab) in self.dock_state.iter_all_tabs_mut() {
-            if surface_idx == new_surface_idx {
-                tab.surface = new_surface_idx;
-            }
-        }
-    }
-
-    /// Focus on a first found tab with specified kind.
-    /// Returns false if no such tab were found.
-    fn focus_on_tab(&mut self, tab_kind: TabKindDiscriminants) -> bool {
-        let mut surface_node_tab = None;
-        for (surface_index, surface) in self.dock_state.iter_surfaces().enumerate() {
-            for (tab_index, (node, tab)) in surface.iter_all_tabs().enumerate() {
-                if TabKindDiscriminants::from(&tab.kind) == tab_kind {
-                    surface_node_tab = Some((
-                        SurfaceIndex(surface_index),
-                        node,
-                        egui_dock::TabIndex(tab_index),
-                    ));
-                    break;
-                }
-            }
-        }
-        if let Some(surface_node_tab) = surface_node_tab {
-            self.dock_state.set_active_tab(surface_node_tab);
-            true
-        } else {
-            false
-        }
-    }
+    // fn new_tab_default(&mut self, kind: TabKindDiscriminants) {
+    //     let tab = kind.create_tab(SurfaceIndex::main(), NodeIndex(self.tab_counter));
+    //     self.add_tab(tab);
+    // }
+    //
+    // fn new_tab(&mut self, kind: TabKind) {
+    //     let tab = Tab {
+    //         surface: SurfaceIndex::main(),
+    //         node: NodeIndex(self.tab_counter),
+    //         kind,
+    //     };
+    //     self.add_tab(tab);
+    // }
+    //
+    // fn add_tab(&mut self, tab: Tab) {
+    //     self.tab_counter += 1;
+    //     let new_surface_idx = self.dock_state.add_window(vec![tab]);
+    //     for ((surface_idx, _node_idx), tab) in self.dock_state.iter_all_tabs_mut() {
+    //         if surface_idx == new_surface_idx {
+    //             tab.surface = new_surface_idx;
+    //         }
+    //     }
+    // }
+    //
+    // /// Focus on a first found tab with specified kind.
+    // /// Returns false if no such tab were found.
+    // fn focus_on_tab(&mut self, tab_kind: TabKindDiscriminants) -> bool {
+    //     let mut surface_node_tab = None;
+    //     for (surface_index, surface) in self.dock_state.iter_surfaces().enumerate() {
+    //         for (tab_index, (node, tab)) in surface.iter_all_tabs().enumerate() {
+    //             if TabKindDiscriminants::from(&tab.kind) == tab_kind {
+    //                 surface_node_tab = Some((
+    //                     SurfaceIndex(surface_index),
+    //                     node,
+    //                     egui_dock::TabIndex(tab_index),
+    //                 ));
+    //                 break;
+    //             }
+    //         }
+    //     }
+    //     if let Some(surface_node_tab) = surface_node_tab {
+    //         self.dock_state.set_active_tab(surface_node_tab);
+    //         true
+    //     } else {
+    //         false
+    //     }
+    // }
 }
