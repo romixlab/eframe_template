@@ -1,16 +1,18 @@
 use crate::context::Context;
 // use crate::tab_viewer::AppTabViewer;
 use crate::tabs::{Tab, TabKind, TabKindDiscriminants, TreeBehavior};
-use egui::{CentralPanel, TopBottomPanel, Ui};
+use crate::windows::{UniqueWindows, WindowKind, WindowToggleButtonsLocations};
+use egui::{CentralPanel, SidePanel, TopBottomPanel, Ui};
 use egui_modal::Modal;
 use egui_tracing::EventCollector;
 use serde::{Deserialize, Serialize};
+use strum::IntoEnumIterator;
 use tokio::sync::oneshot;
 
 pub struct TemplateApp {
     cx: Context,
     state: State,
-    log_viewer: crate::tabs::log_viewer::LogViewer,
+    // log_viewer: crate::tabs::log_viewer::LogViewer,
     shutdown_event_tx: Option<oneshot::Sender<()>>,
     shutdown_modal: Modal,
     shutdown_confirmed: bool,
@@ -21,6 +23,8 @@ struct State {
     tabs: egui_tiles::Tree<Tab>,
     #[serde(skip)]
     tabs_behavior: TreeBehavior,
+    side_panel_expanded: bool,
+    windows: UniqueWindows,
 }
 
 impl Default for State {
@@ -61,6 +65,8 @@ impl Default for State {
         Self {
             tabs,
             tabs_behavior: Default::default(),
+            side_panel_expanded: true,
+            windows: Default::default(),
         }
     }
 }
@@ -80,20 +86,26 @@ impl TemplateApp {
             State::default()
         };
 
-        let log_viewer = crate::tabs::log_viewer::LogViewer::new(event_collector);
-        // restore Log Viewer context if it's window is already open
-        // TODO: Fix this
-        // for (_, tab) in state.dock_state.iter_all_tabs_mut() {
-        //     if matches!(tab.kind, TabKind::LogViewer(_)) {
-        //         tab.kind = TabKind::LogViewer(log_viewer.clone());
-        //     }
-        // }
+        // When adding a new window during development, restored state won't have new windows, take care of it:
+        if state.windows.windows.len() != WindowKind::iter().size_hint().0 {
+            state.windows = Default::default();
+        }
+
+        // Restore contexts for windows
+        for (window, _) in &mut state.windows.windows {
+            if let WindowKind::LogViewer(log_viewer) = window {
+                log_viewer.set_collector(event_collector);
+                break;
+            }
+        }
+
+        // Restore context for tabs
         state.tabs_behavior.feed_cx(cx.clone());
 
         TemplateApp {
             cx,
             state,
-            log_viewer,
+            // log_viewer,
             shutdown_event_tx: Some(shutdown_event_tx),
             shutdown_modal: Modal::new(&cc.egui_ctx, "shutdown_modal"),
             shutdown_confirmed: false,
@@ -101,8 +113,18 @@ impl TemplateApp {
     }
 
     fn menu_bar(&mut self, ui: &mut Ui) {
+        ui.toggle_value(&mut self.state.side_panel_expanded, "*")
+            .on_hover_text("Show/Hide side panel");
+        ui.separator();
         let is_web = cfg!(target_arch = "wasm32");
         ui.menu_button("File", |ui| {
+            let is_clicked = self
+                .state
+                .windows
+                .toggle_buttons(WindowToggleButtonsLocations::File, ui);
+            if is_clicked {
+                ui.close_menu();
+            }
             // NOTE: no File->Quit on web pages!
             if !is_web {
                 if ui.button("Quit").clicked() {
@@ -111,23 +133,31 @@ impl TemplateApp {
             }
         });
         ui.menu_button("Window", |ui| {
-            if ui.button("Log Viewer").clicked() {
-                // if !self.state.focus_on_tab(TabKindDiscriminants::LogViewer) {
-                //     self.state
-                //         .new_tab(TabKind::LogViewer(self.log_viewer.clone()));
-                // }
-                ui.close_menu();
-            }
-            if ui.button("Tab A").clicked() {
-                // self.state.new_tab_default(TabKindDiscriminants::TabA);
+            // if ui.button("Log Viewer").clicked() {
+            //     // if !self.state.focus_on_tab(TabKindDiscriminants::LogViewer) {
+            //     //     self.state
+            //     //         .new_tab(TabKind::LogViewer(self.log_viewer.clone()));
+            //     // }
+            //     ui.close_menu();
+            // }
+            // if ui.button("Tab A").clicked() {
+            //     // self.state.new_tab_default(TabKindDiscriminants::TabA);
+            //     ui.close_menu();
+            // }
+            let is_clicked = self
+                .state
+                .windows
+                .toggle_buttons(WindowToggleButtonsLocations::Window, ui);
+            if is_clicked {
                 ui.close_menu();
             }
         });
         ui.menu_button("Help", |ui| {
-            if ui.button("About").clicked() {
-                // if !self.state.focus_on_tab(TabKindDiscriminants::TabAbout) {
-                //     self.state.new_tab_default(TabKindDiscriminants::TabAbout);
-                // }
+            let is_clicked = self
+                .state
+                .windows
+                .toggle_buttons(WindowToggleButtonsLocations::Help, ui);
+            if is_clicked {
                 ui.close_menu();
             }
         });
@@ -147,6 +177,15 @@ impl eframe::App for TemplateApp {
                 self.menu_bar(ui);
             });
         });
+
+        SidePanel::left("side_panel").resizable(true).show_animated(
+            ctx,
+            self.state.side_panel_expanded,
+            |ui| {
+                ui.label("Side panel");
+            },
+        );
+        self.state.windows.show_open_windows(&mut self.cx, ctx);
 
         CentralPanel::default().show(ctx, |ui| {
             self.state.tabs.ui(&mut self.state.tabs_behavior, ui);

@@ -5,9 +5,7 @@ use egui_tiles::{Tile, TileId, Tiles, UiResponse};
 use serde::{Deserialize, Serialize};
 use strum::{AsRefStr, EnumDiscriminants, EnumIter, IntoEnumIterator};
 
-pub mod log_viewer;
 mod tab_a;
-mod tab_about;
 mod tab_b;
 
 #[derive(Serialize, Deserialize, EnumDiscriminants)]
@@ -15,8 +13,6 @@ mod tab_b;
 pub enum TabKind {
     TabA(tab_a::TabA),
     TabB(tab_b::TabB),
-    TabAbout(tab_about::TabAbout),
-    LogViewer(log_viewer::LogViewer),
 }
 
 impl TabKindDiscriminants {
@@ -24,8 +20,6 @@ impl TabKindDiscriminants {
         let kind = match self {
             TabKindDiscriminants::TabA => TabKind::TabA(tab_a::TabA::default()),
             TabKindDiscriminants::TabB => TabKind::TabB(tab_b::TabB::default()),
-            TabKindDiscriminants::TabAbout => TabKind::TabAbout(tab_about::TabAbout::default()),
-            TabKindDiscriminants::LogViewer => TabKind::LogViewer(log_viewer::LogViewer::default()),
         };
         Tab { kind, nr }
     }
@@ -50,8 +44,6 @@ impl Tab {
         match &mut self.kind {
             TabKind::TabA(t) => t.ui(ui, cx),
             TabKind::TabB(t) => t.ui(ui, cx),
-            TabKind::TabAbout(t) => t.ui(ui, cx),
-            TabKind::LogViewer(t) => t.ui(ui, cx),
         }
         if dragged {
             UiResponse::DragStarted
@@ -64,8 +56,6 @@ impl Tab {
         match &self.kind {
             TabKind::TabA(t) => t.title(),
             TabKind::TabB(t) => t.title(),
-            TabKind::TabAbout(t) => t.title(),
-            TabKind::LogViewer(t) => t.title(),
         }
     }
 

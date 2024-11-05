@@ -1,14 +1,10 @@
 use crate::prelude::*;
 
 #[derive(Default, Serialize, Deserialize)]
-pub struct TabAbout {}
+pub struct AboutWindow {}
 
-impl TabUi for TabAbout {
-    fn title(&self) -> WidgetText {
-        "About".into()
-    }
-
-    fn ui(&mut self, ui: &mut Ui, _cx: &mut Context) {
+impl AboutWindow {
+    pub fn ui(&mut self, ui: &mut Ui, _cx: &mut Context) {
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = 0.0;
             ui.label("Powered by ");

@@ -5,5 +5,6 @@ pub mod context;
 mod prelude;
 mod tab_viewer;
 mod tabs;
+mod windows;
 
 pub use app::TemplateApp;
