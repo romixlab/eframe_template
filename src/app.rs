@@ -1,6 +1,6 @@
 use crate::context::Context;
 // use crate::tab_viewer::AppTabViewer;
-use crate::tabs::{Tab, TabKind, TabKindDiscriminants, TreeBehavior};
+use crate::tabs::{Tab, TreeBehavior};
 use crate::windows::{UniqueWindows, WindowKind, WindowToggleButtonsLocations};
 use egui::{CentralPanel, ScrollArea, SidePanel, TopBottomPanel, Ui};
 use egui_modal::Modal;
