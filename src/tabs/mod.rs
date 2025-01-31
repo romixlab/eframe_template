@@ -3,7 +3,8 @@ use crate::tab_viewer::TabUi;
 use egui::{Rect, Vec2, WidgetText};
 use egui_tiles::{Tile, TileId, Tiles, UiResponse};
 use serde::{Deserialize, Serialize};
-use strum::{AsRefStr, EnumDiscriminants, EnumIter, IntoEnumIterator};
+use std::fmt::{Debug, Formatter};
+use strum::{AsRefStr, EnumDiscriminants, EnumIter};
 
 mod tab_a;
 mod tab_b;
@@ -15,17 +16,23 @@ pub enum TabKind {
     TabB(tab_b::TabB),
 }
 
-impl TabKindDiscriminants {
-    pub fn create_tab(&self, nr: usize) -> Tab {
-        let kind = match self {
-            TabKindDiscriminants::TabA => TabKind::TabA(tab_a::TabA::default()),
-            TabKindDiscriminants::TabB => TabKind::TabB(tab_b::TabB::default()),
-        };
-        Tab { kind, nr }
+// impl TabKindDiscriminants {
+//     pub fn create_tab(&self, nr: usize) -> Tab {
+//         let kind = match self {
+//             TabKindDiscriminants::TabA => TabKind::TabA(tab_a::TabA::default()),
+//             TabKindDiscriminants::TabB => TabKind::TabB(tab_b::TabB::default()),
+//         };
+//         Tab { kind, nr }
+//     }
+// }
+
+impl Debug for TabKind {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "TabKind({})", TabKindDiscriminants::from(self).as_ref())
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Tab {
     pub kind: TabKind,
     pub nr: usize,
@@ -87,7 +94,7 @@ pub struct TreeBehavior {
     simplification_options: egui_tiles::SimplificationOptions,
     tab_bar_height: f32,
     gap_width: f32,
-    add_child_to: Option<TileId>,
+    pub(crate) add_child_to: Option<TileId>,
     cx: Option<Context>,
 }
 
@@ -104,7 +111,7 @@ impl Default for TreeBehavior {
 }
 
 impl TreeBehavior {
-    fn ui(&mut self, ui: &mut egui::Ui) {
+    pub(crate) fn ui(&mut self, ui: &mut egui::Ui) {
         let Self {
             simplification_options,
             tab_bar_height,

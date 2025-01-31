@@ -1,6 +1,5 @@
 use crate::context::Context;
-use crate::tabs::Tab;
-use egui::{Id, Ui, WidgetText};
+use egui::{Ui, WidgetText};
 
 pub trait TabUi {
     fn title(&self) -> WidgetText;

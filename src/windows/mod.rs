@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use strum::{EnumIter, EnumMessage, IntoEnumIterator};
 
 mod about;
+mod debug;
 mod log_viewer;
 mod settings;
 
@@ -15,6 +16,8 @@ pub enum WindowKind {
     Settings(settings::SettingsWindow),
     #[strum(message = "Log viewer")]
     LogViewer(log_viewer::LogViewer),
+    #[strum(message = "Debug")]
+    Debug(debug::DebugWindow),
 }
 
 impl WindowKind {
@@ -23,6 +26,7 @@ impl WindowKind {
             WindowKind::About(about) => about.ui(ui, cx),
             WindowKind::Settings(settings) => settings.ui(ui),
             WindowKind::LogViewer(log_viewer) => log_viewer.ui(ui, cx),
+            WindowKind::Debug(debug) => debug.ui(ui),
         }
     }
 }
@@ -54,7 +58,7 @@ impl UniqueWindows {
                 matches!(item.0, WindowKind::Settings(_))
             }
             WindowToggleButtonsLocations::Window => {
-                matches!(item.0, WindowKind::LogViewer(_))
+                matches!(item.0, WindowKind::LogViewer(_)) || matches!(item.0, WindowKind::Debug(_))
             }
             WindowToggleButtonsLocations::Help => {
                 matches!(item.0, WindowKind::About(_))

@@ -2,12 +2,13 @@ use crate::context::Context;
 // use crate::tab_viewer::AppTabViewer;
 use crate::tabs::{Tab, TabKind, TabKindDiscriminants, TreeBehavior};
 use crate::windows::{UniqueWindows, WindowKind, WindowToggleButtonsLocations};
-use egui::{CentralPanel, SidePanel, TopBottomPanel, Ui};
+use egui::{CentralPanel, ScrollArea, SidePanel, TopBottomPanel, Ui};
 use egui_modal::Modal;
 use egui_tracing::EventCollector;
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
 use tokio::sync::oneshot;
+use tracing::debug;
 
 pub struct TemplateApp {
     cx: Context,
@@ -168,6 +169,41 @@ impl TemplateApp {
             egui::widgets::global_theme_preference_buttons(ui);
         });
     }
+
+    fn side_panel(&mut self, ui: &mut Ui) {
+        self.state.tabs_behavior.ui(ui);
+
+        ui.collapsing("Tree", |ui| {
+            ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Extend);
+            let tree_debug = format!("{:#?}", self.state.tabs);
+            ui.monospace(&tree_debug);
+        });
+
+        ui.separator();
+
+        ui.collapsing("Active tiles", |ui| {
+            let active = self.state.tabs.active_tiles();
+            for tile_id in active {
+                use egui_tiles::Behavior as _;
+                let name = self
+                    .state
+                    .tabs_behavior
+                    .tab_title_for_tile(&self.state.tabs.tiles, tile_id);
+                ui.label(format!("{} - {tile_id:?}", name.text()));
+            }
+        });
+
+        ui.separator();
+
+        if let Some(root) = self.state.tabs.root() {
+            crate::sidepanel::tree_ui(
+                ui,
+                &mut self.state.tabs_behavior,
+                &mut self.state.tabs.tiles,
+                root,
+            );
+        }
+    }
 }
 
 impl eframe::App for TemplateApp {
@@ -182,9 +218,16 @@ impl eframe::App for TemplateApp {
             ctx,
             self.state.side_panel_expanded,
             |ui| {
-                ui.label("Side panel");
+                ScrollArea::vertical().show(ui, |ui| {
+                    self.side_panel(ui);
+                });
             },
         );
+
+        if let Some(parent) = self.state.tabs_behavior.add_child_to.take() {
+            debug!("Add child to {:?}", parent);
+        }
+
         self.state.windows.show_open_windows(&mut self.cx, ctx);
 
         CentralPanel::default().show(ctx, |ui| {
