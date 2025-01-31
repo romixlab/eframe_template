@@ -1,6 +1,6 @@
 [package]
 name = "eframe_template"
-version = "0.1.1"
+version = "0.1.0"
 authors = ["Emil Ernerfeldt <emil.ernerfeldt@gmail.com>"]
 edition = "2021"
 include = ["LICENSE-APACHE", "LICENSE-MIT", "**/*.rs", "Cargo.toml"]
@@ -23,6 +23,7 @@ egui_tiles = "0.11"
 egui-modal = "0.6"
 egui_tracing = "0.2.6"
 
+# You only need serde if you want app persistence:
 serde = { version = "1", features = ["derive"] }
 #ron = "0.8"
 strum = { version = "0.26", features = ["derive"] }
@@ -36,10 +37,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 # web:
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen-futures = "0.4"
-
-# to access the DOM (to hide the loading text)
-[target.'cfg(target_arch = "wasm32")'.dependencies.web-sys]
-version = "0.3.4"
+web-sys = "0.3.70"           # to access the DOM (to hide the loading text)
 
 [profile.release]
 opt-level = 2 # fast and small wasm
