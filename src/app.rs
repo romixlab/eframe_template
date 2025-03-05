@@ -259,8 +259,15 @@ impl eframe::App for TemplateApp {
         eframe::set_value(storage, eframe::APP_KEY, &self.state);
     }
 
-    // fn on_exit(&mut self) {
+    #[cfg(feature = "glow")]
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
+        // if let Some(tx) = self.shutdown_event_tx.take() {
+        //     _ = tx.send(());
+        // }
+    }
+
+    #[cfg(feature = "wgpu")]
+    fn on_exit(&mut self) {
         // if let Some(tx) = self.shutdown_event_tx.take() {
         //     _ = tx.send(());
         // }
