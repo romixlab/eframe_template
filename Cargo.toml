@@ -11,23 +11,22 @@ all-features = true
 targets = ["x86_64-unknown-linux-gnu", "wasm32-unknown-unknown"]
 
 [dependencies]
-egui = "0.30"
-eframe = { version = "0.30", default-features = false, features = [
+egui = "0.31"
+eframe = { version = "0.31", default-features = false, features = [
     #    "accesskit",     # Make egui compatible with screen readers. NOTE: adds a lot of dependencies.
     "default_fonts", # Embed the default egui fonts.
     "glow", # Use the glow rendering backend. Alternative: "wgpu".
     "persistence", # Enable restoring app state when restarting the app.
 ] }
 #egui_dock = { version = "0.14.0", features = ["serde"] }
-egui_tiles = "0.11"
-egui-modal = "0.6"
+egui_tiles = "0.12"
 egui_tracing = "0.2.6"
 
 # You only need serde if you want app persistence:
 serde = { version = "1", features = ["derive"] }
 #ron = "0.8"
-strum = { version = "0.26", features = ["derive"] }
-tokio = { version = "1.39", features = ["full", "sync"] }
+strum = { version = "0.27", features = ["derive"] }
+#tokio = { version = "1.43", features = ["full", "sync"] }
 
 # native:
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
@@ -36,6 +35,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 # web:
 [target.'cfg(target_arch = "wasm32")'.dependencies]
+log = "0.4"
 wasm-bindgen-futures = "0.4"
 web-sys = "0.3.70"           # to access the DOM (to hide the loading text)
 
@@ -47,7 +47,7 @@ opt-level = 2 # fast and small wasm
 opt-level = 2
 
 [patch.crates-io]
-egui_tracing = { git = "https://github.com/juh9870/egui_tracing.git" }
+egui_tracing = { git = "https://github.com/maxjoehnk/egui_tracing.git", branch = "feature/egui-0.31" }
 
 # If you want to use the bleeding edge version of egui and eframe:
 # egui = { git = "https://github.com/emilk/egui", branch = "master" }

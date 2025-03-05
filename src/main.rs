@@ -1,13 +1,12 @@
 #![warn(clippy::all, rust_2018_idioms)]
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
-use tracing_subscriber::layer::SubscriberExt;
-use tracing_subscriber::util::SubscriberInitExt;
-use tracing_subscriber::EnvFilter;
-
 // When compiling natively:
 #[cfg(not(target_arch = "wasm32"))]
 fn main() -> eframe::Result {
+    use tracing_subscriber::layer::SubscriberExt;
+    use tracing_subscriber::util::SubscriberInitExt;
+    use tracing_subscriber::EnvFilter;
     let collector = egui_tracing::EventCollector::default();
     tracing_subscriber::registry()
         .with(collector.clone())
@@ -16,15 +15,13 @@ fn main() -> eframe::Result {
         .init();
     // tracing_subscriber::fmt::init();
 
-    let runtime = tokio::runtime::Builder::new_multi_thread()
-        // .worker_threads(4)
-        .enable_all()
-        .build()
-        .unwrap();
-
-    let _guard = runtime.enter();
-
-    let (shutdown_event_tx, shutdown_event_rx) = tokio::sync::oneshot::channel::<()>();
+    // let runtime = tokio::runtime::Builder::new_multi_thread()
+    // .worker_threads(4)
+    // .enable_all()
+    // .build()
+    // .unwrap();
+    // let _guard = runtime.enter();
+    // let (shutdown_event_tx, shutdown_event_rx) = tokio::sync::oneshot::channel::<()>();
 
     let cx = eframe_template::context::Context::new();
 
@@ -44,20 +41,18 @@ fn main() -> eframe::Result {
         native_options,
         Box::new(|cc| {
             Ok(Box::new(eframe_template::TemplateApp::new(
-                cc,
-                cx,
-                collector,
-                shutdown_event_tx,
+                cc, cx, collector,
+                // shutdown_event_tx,
             )))
         }),
     );
 
     // Wait for async tasks to finish
-    runtime.block_on(async move {
-        _ = shutdown_event_rx.await;
-        tracing::info!("Shutting down by UI request");
-        // TODO: send out exit request to other tasks here
-    });
+    // runtime.block_on(async move {
+    //     _ = shutdown_event_rx.await;
+    //     tracing::info!("Shutting down by UI request");
+    //     // TODO: send out exit request to other tasks here
+    // });
 
     ui_result
 }
@@ -84,11 +79,13 @@ fn main() {
             .dyn_into::<web_sys::HtmlCanvasElement>()
             .expect("the_canvas_id was not a HtmlCanvasElement");
 
+        let cx = eframe_template::context::Context::new();
+
         let start_result = eframe::WebRunner::new()
             .start(
                 canvas,
                 web_options,
-                Box::new(|cc| Ok(Box::new(eframe_template::TemplateApp::new(cc)))),
+                Box::new(|cc| Ok(Box::new(eframe_template::TemplateApp::new(cc, cx)))),
             )
             .await;
 
